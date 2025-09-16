@@ -5,7 +5,15 @@
  * Date:    2021-03-29
  * File:    ConditionAssertFix
  * Project: ast_tools
+ * 
+ * var v, k, a = 7 & n >> 3;
+ * 转==>
+ * var v;
+ * var k;
+ * var a = 7 & n >> 3;
+ * 
  *****************************************************/
+const PrintCode = require('../../libs/tools/PrintCode')
 
 const types = require("@babel/types");
 const traverse_ConditionalVariableDeclarator = {
@@ -64,6 +72,13 @@ function fix(path, t) {
                 let _node = path.parentPath.node;
                 let _init = _node.init;
                 let _body = path.parentPath.parent.body;
+                console.log("VariableDeclaratorFIx:",PrintCode.PrintCode(path.parentPath));
+                if (_body == undefined){
+                    return
+                }
+                if (!Array.isArray(_body)) {
+                    _body = [_body]; // 单条语句也包装成数组
+                }
                 for (var ids = 0; ids < seqs.length - 1; ids++) {
                     _body.splice(_body.indexOf(_node), 0, seqs[ids])
                 }

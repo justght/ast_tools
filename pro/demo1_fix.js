@@ -27,10 +27,11 @@ const ConstantFix = require('../libs/demo1/ConstantFix')
 const DecryptVariableFix = require('../libs/demo1/DecryptVariableFix')
 const CleanNullFix = require('../libs/common/CleanNullIfFix')
 const ReserveStrFix = require('../libs/demo1/ReserveStrFix')
+const deleteExtraVar = require("../libs/common/CleanNullIfFix");
 
 
 function fix(source_code) {
-    const ast = parser.parse(source_code)
+    const ast = parser.parse(source_code)//把 JS 源码字符串 source_code 转换成 AST（抽象语法树）
     // 格式修复
     traverse(ast, IfWithExpressFix.fix)
     traverse(ast, ForWithExpressFix.fix)
@@ -65,16 +66,16 @@ function fix(source_code) {
     traverse(ast, DecryptVariableFix.fix)
     traverse(ast, CleanNullFix.fix)
     traverse(ast, ReserveStrFix.fix)
-    // traverse(ast, deleteExtraVar.fix)
+    traverse(ast, deleteExtraVar.fix)
 
     const opts = {
         indent: {
-            adjustMultilineComment: true,
-            style: "        ",
-            base: 0
+            adjustMultilineComment: true,// 多行注释自动对齐缩进
+            style: "        ",// 每一级缩进用 8 个空格（你这里是空格，不是 \t）
+            base: 0// // 初始缩进层级为 0
         }
     }
-    return generator(ast, opts).code
+    return generator(ast, opts).code //它的作用是把 AST 对象重新“翻译”成字符串形式的 JavaScript 代码。
 }
 
 exports.fix = fix

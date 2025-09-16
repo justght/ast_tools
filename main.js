@@ -7,13 +7,15 @@
  * Project: ast_tools
  *****************************************************/
 
-const fs = require("fs");
-const iconv = require('iconv-lite');
-const common_fix = require('./pro/demo1_fix')
+const fs = require("fs");//引入 Node.js 内置的 文件系统模块 fs，用于读写文件。
+const iconv = require('iconv-lite');//用来做字符编码转换
+//引入本地模块 ./pro/demo1_fix.js，
+//这个文件里应该导出了一个 fix 函数，负责具体的 AST 处理逻辑（比如反混淆、AST 修改）
+const common_fix = require('./pro/akamai3_fix')
 
 
-const source_path = './demos/demo1/source.js'
-const output_path = './demos/demo1/output.js'
+const source_path = './study/akamai/source/OWtdMHoB_format.js'
+const output_path = './study/akamai/source/output.js'
 const content = fs.readFileSync(source_path, {encoding: 'binary'});
 const buf = new Buffer.from(content, 'binary');
 const source_code = iconv.decode(buf, 'utf-8');

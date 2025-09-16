@@ -1,0 +1,57 @@
+akamai3 还原方案
+
+
+1. 先定位到字符串还原加载完成的位置 如图1
+2. 将第一层需要解密的函数都放到needRestoreFuncArray里（这里可以优化）
+window.lc = {}
+let needRestoreFuncArray = ['BD()','p2()', 'KD()', 'fp()', 'U2()', 'xG()', 'bt()', 'Cm()']
+for (let needRestoreFunc of needRestoreFuncArray){
+    let arrayIterName = needRestoreFunc
+    let arrayIter = eval(arrayIterName)
+    for (let a in arrayIter){
+        let bc = {};
+        bc[a] = arrayIter[a];
+        arrayIter[a] = function(...args) {
+            console.log(`${arrayIterName}["${a}"]`, args);
+            const result = bc[a].apply(this, args);
+            window.lc[`${arrayIterName}['${a}']`] = result;
+            console.log(`Called. Result:`, result);
+            return result;
+        };
+    }
+}
+3. 在定位的位置执行上面代码，并放开断点，复制window.lc, 可以看到相关运行的函数都出来了，到这步基本都可以了，后面靠各位的ast了
+let lc ={
+}
+
+// *** 下面代码有问题***  周末来了在搞，简单看看效果还行
+const akamaiStringDecode = {
+    "CallExpression"(path){
+        let sourceCode = path.toString();
+        if (sourceCode.length < 13 || sourceCode.slice(2, 4) !== "()") {
+            return;
+        }
+        let needReplaceCode = sourceCode.split("]")[0]+']'
+
+       	// 这里定位代码有问题需要修改（但）
+        if (sourceCode.length > 30){
+            return;
+        }
+        
+        if (sourceCode.indexOf("fp()['hB']") !== -1){
+            console.log(sourceCode);
+            debugger;
+        }
+        if (lc.hasOwnProperty(needReplaceCode)){
+            let value = lc[needReplaceCode];
+            console.log(sourceCode,"-->",value,"\n");
+            path.replaceWith(types.valueToNode(value))
+        }
+    }
+}
+
+traverse(ast, akamaiStringDecode);
+console.log("计算表达式还原-执行完毕 ==> ? ")
+
+
+4. 第二层的还原和第一层一样，就是替换下  let needRestoreFuncArray = ['BD()','p2()', 'KD()', 'fp()', 'U2()', 'xG()', 'bt()', 'Cm()']

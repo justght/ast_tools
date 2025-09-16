@@ -1,5 +1,9 @@
 /**
  * Ai > 6 && (y = d, Re = 1 | y[0], y = void 0, y = Re, ur = y, li = 16034);
+ * 转==>
+ * if (Ai > 6) {
+ * y = d, Re = 1 | y[0], y = void 0, y = Re, ur = y, li = 16034;
+ * }
  */
 
 // 使用完后需要增加一个Sequence

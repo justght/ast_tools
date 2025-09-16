@@ -7,8 +7,23 @@
  * Project: ast_tools
  *****************************************************/
 /**
+ * case1:
  * var _$7Y = _$6Q ? _$6Q._$Z1 : ''; VariableDeclaration
  * _$7Y = _$6Q ? _$6Q._$Z1 : ''; AssignmentExpression
+ * 
+ * 转==>
+ * 
+ * if (_$6Q) {
+ * var _$7Y = _$6Q._$Z1;
+ * } else {
+ * var _$7Y = '';
+ * }
+ * if (_$6Q) {
+ * _$7Y = _$6Q._$Z1;
+ * } else {
+ * _$7Y = '';
+ * }
+ * 
  * **/
 const types = require("@babel/types");
 const traverse_ifexpress = {
