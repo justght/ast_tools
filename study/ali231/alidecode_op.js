@@ -19,7 +19,7 @@ const LogicalExpressionFix = require('../../libs/common/LogicalExpressionFix')
 
 
 //将源代码解析为AST
-process.argv.length > 2 ? encodeFile = process.argv[2]: encodeFile ="study/ali231/part/Xr.js";
+process.argv.length > 2 ? encodeFile = process.argv[2]: encodeFile ="study/ali231/part/mid.js";
 // process.argv.length > 2 ? encodeFile = process.argv[2]: encodeFile ="study/ali231/fireyejs.js";
 process.argv.length > 3 ? decodeFile = process.argv[3]: decodeFile ="study/ali231/part/decode_fireyejs_ouput.js";
 
@@ -72,25 +72,29 @@ const if_block={
         }
       },
 }
-traverse(ast,if_block);
-traverse(ast, IfWithExpressFix.fix)
-traverse(ast, ForWithExpressFix.fix)
-traverse(ast, ForWithForFix.fix)
-traverse(ast, ReturnSeqFix.fix)
+// traverse(ast,if_block);
+// traverse(ast, IfWithExpressFix.fix)
+// traverse(ast, ForWithExpressFix.fix)
+// traverse(ast, ForWithForFix.fix)
+// traverse(ast, ReturnSeqFix.fix)
 
 
 
 
 
-//三目赋值表达式 转if-else
-traverse(ast, ConditionalFix.fix)
+// //三目赋值表达式 转if-else
+// traverse(ast, ConditionalFix.fix)
 
-//逗号表达式还原
-traverse(ast, VariableDeclaratorFix.fix) //逗号表达式
+// //逗号表达式还原
+// traverse(ast, VariableDeclaratorFix.fix) //逗号表达式
 
-//逻辑表达式转if-else
-traverse(ast, LogicalExpressionFix.fix)
+// //逻辑表达式转if-else
+// traverse(ast, LogicalExpressionFix.fix)
 
+
+
+// 放在插件作用域最外面
+let cachedCases = null;
 
 //if跳转判断改为==判断
 // 改if条件的判断，全部改为 == 形式
@@ -99,6 +103,10 @@ function getSwitchhNode(name,scope){
     scope.traverse(scope.block,{
 
         IfStatement(path){
+            // 如果已经处理过就直接返回
+            // if (path.node._processed) return;
+            // path.node._processed = true;
+
             let {test,consequent,alternate} = path.node;
 			let testPath = path.get('test');
             let switchCaseNode = ''
@@ -107,14 +115,16 @@ function getSwitchhNode(name,scope){
             }
 
             let {left,operator,right} = test;
-
+            console.log("test_value:",test.right.name);
+            if(test.right.name != name){return};
             if (operator == '==' && test.right.name == name) {
                 switchCaseNode = types.SwitchCase(left, consequent.body)
             } else if (operator == '>' && test.left.name == name) {
                 types.NumericLiteral(right.value + 1);
                 switchCaseNode = types.SwitchCase(left, consequent.body)
              }
-            else if (operator == '<') { 
+            else if (operator == '<') {
+
                 if(types.isIfStatement(consequent.body[0]) && 
                 types.isBinaryExpression(consequent.body[0].test) && 
                 consequent.body[0].test.operator == '==' &&
@@ -133,6 +143,7 @@ function getSwitchhNode(name,scope){
                 switchCaseNode = types.SwitchCase(left, consequent.body)
             }
             else {
+                // PrintCode.PrintCode(consequent);
                 if(alternate && !types.isIfStatement(alternate.body[0])){
                     types.NumericLiteral(right.value - 1);
                     switchCaseNode = types.SwitchCase(right, alternate.body)
@@ -150,27 +161,37 @@ function getSwitchhNode(name,scope){
 
 const ifToSwitch = 
 {
-    UnaryExpression(path)
+    "SwitchCase"(path)
     {
+         // 只在第一次时调用
+    
         let {scope,node} = path;
-        // let {id,params,body} = node;
-        // if (!types.isIdentifier(id,{name:"__V"}) ||
-        //     params.length != 5)
-        // {
-        //     return;
-        // }
-        
-        let name     = "L";
+        if(!types.isExpressionStatement(node.consequent[0]) || 
+            !types.isUnaryExpression(node.   consequent[0].expression)){
+            return;
+        }
+        let name = "L";
         let switchId = types.Identifier(name);
         let switchBolck = getSwitchhNode(name,scope);
-        
+        if (!cachedCases) {
+            
+            cachedCases = switchBolck;
+        }
         if (switchBolck.length > 0)
         {
             let switchNode = types.SwitchStatement(switchId,switchBolck);
-            let retArray = [path.node.body.body[0]];
-            retArray.push(path.node.body.body[3])
-            retArray.push(switchNode);
-            path.node.body = types.BlockStatement(retArray);
+            // let retArray = [path.node.body.body[0]];
+            // retArray.push(path.node.body.body[3])
+            // retArray.push(switchNode);
+            // path.node.body = types.BlockStatement([switchNode]);
+
+            // node.consequent[0] = switchNode;//可能存在重复
+            // path.skip();
+            // return;
+
+            const firstStmtPath = path.get('consequent.0');
+            firstStmtPath.replaceWith(switchNode);
+            // path.skip();
         }
     }
 }
@@ -224,11 +245,10 @@ var nextIfToSwicth= {
     }
 }
 
-traverse(ast,nextIfToSwicth)//这个有问题
+// traverse(ast,nextIfToSwicth)//这个有问题
 
 
-//逻辑表达式转if-else
-traverse(ast, LogicalExpressionFix.fix)
+
 
 
 
