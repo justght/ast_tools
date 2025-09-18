@@ -19,7 +19,7 @@ const LogicalExpressionFix = require('../../libs/common/LogicalExpressionFix')
 
 
 //将源代码解析为AST
-process.argv.length > 2 ? encodeFile = process.argv[2]: encodeFile ="study/ali231/part/mid.js";
+process.argv.length > 2 ? encodeFile = process.argv[2]: encodeFile ="study/ali231/part/Xr.js";
 // process.argv.length > 2 ? encodeFile = process.argv[2]: encodeFile ="study/ali231/fireyejs.js";
 process.argv.length > 3 ? decodeFile = process.argv[3]: decodeFile ="study/ali231/part/decode_fireyejs_ouput.js";
 
@@ -72,24 +72,24 @@ const if_block={
         }
       },
 }
-// traverse(ast,if_block);
-// traverse(ast, IfWithExpressFix.fix)
-// traverse(ast, ForWithExpressFix.fix)
-// traverse(ast, ForWithForFix.fix)
-// traverse(ast, ReturnSeqFix.fix)
+traverse(ast,if_block);
+traverse(ast, IfWithExpressFix.fix)
+traverse(ast, ForWithExpressFix.fix)
+traverse(ast, ForWithForFix.fix)
+traverse(ast, ReturnSeqFix.fix)
 
 
 
 
 
-// //三目赋值表达式 转if-else
-// traverse(ast, ConditionalFix.fix)
+//三目赋值表达式 转if-else
+traverse(ast, ConditionalFix.fix)
 
-// //逗号表达式还原
-// traverse(ast, VariableDeclaratorFix.fix) //逗号表达式
+//逗号表达式还原
+traverse(ast, VariableDeclaratorFix.fix) //逗号表达式
 
-// //逻辑表达式转if-else
-// traverse(ast, LogicalExpressionFix.fix)
+//逻辑表达式转if-else
+traverse(ast, LogicalExpressionFix.fix)
 
 
 
@@ -98,15 +98,10 @@ let cachedCases = null;
 
 //if跳转判断改为==判断
 // 改if条件的判断，全部改为 == 形式
-function getSwitchhNode(name,scope){
+function getSwitchhNode(name,path){
     let switchBolck = [];
-    scope.traverse(scope.block,{
-
+    path.traverse({
         IfStatement(path){
-            // 如果已经处理过就直接返回
-            // if (path.node._processed) return;
-            // path.node._processed = true;
-
             let {test,consequent,alternate} = path.node;
 			let testPath = path.get('test');
             let switchCaseNode = ''
@@ -161,22 +156,19 @@ function getSwitchhNode(name,scope){
 
 const ifToSwitch = 
 {
-    "SwitchCase"(path)
+    "ExpressionStatement"(path)
     {
          // 只在第一次时调用
-    
+        // 如果已经处理过就直接返回
+        if (path.node._processed) return;
+        path.node._processed = true;
         let {scope,node} = path;
-        if(!types.isExpressionStatement(node.consequent[0]) || 
-            !types.isUnaryExpression(node.   consequent[0].expression)){
+        if(!types.isUnaryExpression(node.expression)){
             return;
         }
         let name = "L";
         let switchId = types.Identifier(name);
-        let switchBolck = getSwitchhNode(name,scope);
-        if (!cachedCases) {
-            
-            cachedCases = switchBolck;
-        }
+        let switchBolck = getSwitchhNode(name,path);
         if (switchBolck.length > 0)
         {
             let switchNode = types.SwitchStatement(switchId,switchBolck);
@@ -189,9 +181,13 @@ const ifToSwitch =
             // path.skip();
             // return;
 
-            const firstStmtPath = path.get('consequent.0');
-            firstStmtPath.replaceWith(switchNode);
-            // path.skip();
+            // const firstStmtPath = path.get('consequent.0');
+            // firstStmtPath.replaceWith(switchNode);
+            
+            
+            
+            path.replaceWith(switchNode);
+            return;
         }
     }
 }

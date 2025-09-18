@@ -1,5 +1,5 @@
 function a(){
-    switch (d) {
+switch (d) {
                 case 0:
                   (function () {
                     switch (x) {
