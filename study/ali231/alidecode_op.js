@@ -19,7 +19,7 @@ const LogicalExpressionFix = require('../../libs/common/LogicalExpressionFix')
 
 
 //将源代码解析为AST
-process.argv.length > 2 ? encodeFile = process.argv[2]: encodeFile ="study/ali231/part/Xr.js";
+process.argv.length > 2 ? encodeFile = process.argv[2]: encodeFile ="study/ali231/part/mid.js";
 // process.argv.length > 2 ? encodeFile = process.argv[2]: encodeFile ="study/ali231/fireyejs.js";
 process.argv.length > 3 ? decodeFile = process.argv[3]: decodeFile ="study/ali231/part/decode_fireyejs_ouput.js";
 
@@ -38,7 +38,7 @@ const del_void = {
     },
 }
 
-traverse(ast, del_void);
+// traverse(ast, del_void);
 
 // 格式修复 给代码块加{}
 
@@ -72,29 +72,27 @@ const if_block={
         }
       },
 }
-traverse(ast,if_block);
-traverse(ast, IfWithExpressFix.fix)
-traverse(ast, ForWithExpressFix.fix)
-traverse(ast, ForWithForFix.fix)
-traverse(ast, ReturnSeqFix.fix)
+// traverse(ast,if_block);
+// traverse(ast, IfWithExpressFix.fix)
+// traverse(ast, ForWithExpressFix.fix)
+// traverse(ast, ForWithForFix.fix)
+// traverse(ast, ReturnSeqFix.fix)
 
 
 
 
 
-//三目赋值表达式 转if-else
-traverse(ast, ConditionalFix.fix)
+// //三目赋值表达式 转if-else
+// traverse(ast, ConditionalFix.fix)
 
-//逗号表达式还原
-traverse(ast, VariableDeclaratorFix.fix) //逗号表达式
+// //逗号表达式还原
+// traverse(ast, VariableDeclaratorFix.fix) //逗号表达式
 
-//逻辑表达式转if-else
-traverse(ast, LogicalExpressionFix.fix)
+// //逻辑表达式转if-else
+// traverse(ast, LogicalExpressionFix.fix)
 
 
 
-// 放在插件作用域最外面
-let cachedCases = null;
 
 //if跳转判断改为==判断
 // 改if条件的判断，全部改为 == 形式
@@ -191,57 +189,107 @@ const ifToSwitch =
         }
     }
 }
-traverse(ast, ifToSwitch);
 // if语句转switch语句
-var nextIfToSwicth= {
-    "SwitchCase"(path){
-        let {parentPath,node,parent,scope} = path;
-        let {consequent} = node;
-        if(!parentPath.isSwitchStatement() || parent.discriminant.name != "Ci"){
-            return;
-        }
-        if(consequent.length != 2 || !types.isIfStatement(consequent.at(0))){
-            return;
-        }
+// traverse(ast, ifToSwitch);
 
-        let IfMap = new Map()
+//3层switch转为一层switch
+function reconstructL(L, x, d, high = 0) {
+  // high 是高 8 位（第 24–31 位），如果不知道可以默认 0
+  return (high << 24) | (L << 16) | (x << 8) | d;
+}
+function reconstructFromD(d, x = 0, L = 0, H = 0) {
+  return (H << 24) | (L << 16) | (x << 8) | d;
+}
 
-        path.traverse({     // 将 每个if的true板块提出来，放到map里
-            IfStatement:{
-                exit(_path){
-                let ifTest= _path.node.test
-                let ifConsequent = _path.node.consequent
-                if(!types.isBinaryExpression(ifTest) || ifTest.operator != "=="){
-                    return;
+
+function get_switchs_node(path) {
+    var switchCaseNode_blocks_l = []
+    path.traverse({
+        "SwitchCase"(path) {
+            //结构判断，是否为3层switch
+            const topSwitch = path.findParent(p => p.isSwitchCase());
+            if (topSwitch) {
+                console.log("找到了顶层 switch");
+                let toptopSwitch = topSwitch.findParent(p => p.isSwitchCase());
+                if (toptopSwitch) {
+
+                    const hasTryCatch = path.node.consequent.some(stmt => types.isTryStatement(stmt));
+                    if (hasTryCatch) {
+                        // 跳过这个 case
+                        // return; // 直接 return 不做任何操作
+                        path.skip(); // 不对当前节点的子节点进行遍历，只处理当前节点,相当于将符合条件的子节点当作了最底层的节点
+                    }
+
+                    // 这里写你的处理逻辑
+                    console.log('处理不含 try 的 case：', path.node.test?.name);
+
+                    let L = path.node.test.value;
+                    let x = topSwitch.node.test.value;
+                    let d = toptopSwitch.node.test.value;
+
+                    let l = reconstructL(L, x, d);
+                    console.log("l,L,x,d:", l, L, x, d);
+
+                    path.node.test.value = l;
+                    // 给每个 case 添加一个注释
+                    types.addComment(path.node,"leading",`l=${l},L=${L},x=${x},d=${d} case ${path.node.test ? path.node.test.value : 'default'} 开始\n`);
+                    switchCaseNode_blocks_l.push(path.node);
                 }
-                if(ifTest.right.name != "mi"){
-                    return;
+                
+            } else {
+                console.log("没有找到 switch，topSwitch 为 null");
+                let path_switch = path.parentPath;
+                if(types.isSwitchStatement(path_switch) && 
+                path_switch.node.discriminant.name == 'd' &&
+                path.node.test.value != 0
+            ){
+                    const hasTryCatch = path.node.consequent.some(stmt => types.isTryStatement(stmt));
+                    if (hasTryCatch) {
+                        // 跳过这个 case
+                        // return; // 直接 return 不做任何操作
+                        path.skip(); // 如果你还会往下递归遍历就用 skip()
+                    }
+
+                    // 这里写你的处理逻辑
+                    console.log('处理不含 try 的 case：', path.node.test?.name);
+
+                    let d = path.node.test.value;
+                    let l = reconstructFromD(d);
+                    console.log("l,d:", l,d);
+                    path.node.test.value = l;
+                    types.addComment(path.node,"leading",` l,d = ${l},${d} case ${path.node.test ? path.node.test.value : 'default'} 开始\n`);
+                    switchCaseNode_blocks_l.push(path.node);
                 }
+            }
 
 
-                IfMap.set(ifTest.left.value,ifConsequent.body)
-                // console.log(_path.toString())
-
-            }}
-        })
-
-        let switchNode = undefined;
-        let CaseNode = [];   // 定义为数组，存放case板块
-        for (let i=0;i<IfMap.size;i++){
-            let caseValueArry = IfMap.get(i)
-            let CastTest = types.NumericLiteral(i)
-            caseValueArry.push(types.BreakStatement())
-            let switchCaseNode = types.SwitchCase(CastTest,caseValueArry)
-            CaseNode.push(switchCaseNode)
         }
-        switchNode = types.SwitchStatement(types.Identifier("mi"),CaseNode)
-        path.node.consequent.shift() // 删除第一个
-        path.node.consequent.unshift(switchNode)    //将一个或多个元素添加到数组的开头
-        // path.stop()
+    });
+
+    return switchCaseNode_blocks_l;
+}
+
+const switchs_toswitch = {
+    "ForStatement"(path){
+        let {node,scope} = path;
+        let {init,test} = node;
+
+        if(init && test && types.isVariableDeclaration(init) &&
+        init.declarations.length == 1 && types.isVariableDeclarator(init.declarations[0]) &&
+        init.declarations[0].id.name == 'l'){
+            let switchCaseNode_blocks_l = get_switchs_node(path);
+            let switchId = node.init.declarations[0].id;
+            let switchNode = types.SwitchStatement(switchId,switchCaseNode_blocks_l);
+
+            let forbodys = node.body.body;
+            forbodys[forbodys.length-1] = switchNode;//types.BlockStatement([switchNode]);
+
+
+        }
     }
 }
 
-// traverse(ast,nextIfToSwicth)//这个有问题
+traverse(ast,switchs_toswitch)//这个有问题
 
 
 
@@ -249,11 +297,8 @@ var nextIfToSwicth= {
 
 
 
-let { code } = generator(ast, 
-  opts = { 
-    jsescOption: { "minimal": true }, 
-    // compact: true 
-}
-);
-
+const { code } = generator(ast, {
+  jsescOption: { minimal: true },
+  comments: true
+});
 fs.writeFile(decodeFile, code, (err) => {});
