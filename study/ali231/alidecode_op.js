@@ -289,7 +289,7 @@ const switchs_toswitch = {
     }
 }
 
-traverse(ast,switchs_toswitch)//这个有问题
+traverse(ast,switchs_toswitch)
 
 
 

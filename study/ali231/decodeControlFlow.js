@@ -4,7 +4,7 @@ const types     = require("@babel/types");
 const t         = require("@babel/types");
 const generator = require("@babel/generator");
 const fs        = require("fs");
-
+const PrintCode = require('../../libs/tools/PrintCode')
 
 process.argv.length > 2?encodeFile = process.argv[2]:encodeFile = "E:\\ast_tools\\study\\ali231\\part\\decode_fireyejs_ouput.js";
 process.argv.length > 3?decodeFile = process.argv[3]:decodeFile = "E:\\ast_tools\\study\\ali231\\part\\decode_fireyejs_ouput_d.js";
@@ -31,7 +31,72 @@ const addBreakStatement =
 	}
 }
 
-traverse(ast, addBreakStatement);
+// traverse(ast, addBreakStatement);
+
+
+const if_conditional = {
+	IfStatement(path) {
+        const { node } = path;
+
+        // 确认 if 和 else 都是单条语句并且是赋值语句
+        if (
+          node.consequent &&
+          node.alternate &&
+          t.isBlockStatement(node.consequent) &&
+          t.isBlockStatement(node.alternate)
+        ) {
+          const consBody = node.consequent.body;
+          const altBody = node.alternate.body;
+
+          if (
+            consBody.length === 1 &&
+            altBody.length === 1 &&
+            t.isExpressionStatement(consBody[0]) &&
+            t.isExpressionStatement(altBody[0]) &&
+            t.isAssignmentExpression(consBody[0].expression) &&
+            t.isAssignmentExpression(altBody[0].expression)
+          ) {
+            const consAssign = consBody[0].expression;
+            const altAssign = altBody[0].expression;
+
+            // 确认左右变量一致
+            if (
+              t.isIdentifier(consAssign.left) &&
+              t.isIdentifier(altAssign.left) &&
+              consAssign.left.name === altAssign.left.name
+            ) {
+              // 构造新的赋值表达式：l = gr ? 3539968 : 1973504;
+              const newExpr = t.assignmentExpression(
+                "=",
+                consAssign.left,
+                t.conditionalExpression(
+                  node.test, // if 的条件作为 test
+                  consAssign.right, // 真值
+                  altAssign.right // 假值
+                )
+              );
+
+              // 包装成表达式语句
+              path.replaceWith(t.expressionStatement(newExpr));
+            }
+          }
+        }
+      }
+}
+
+// traverse(ast, if_conditional);
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -90,28 +155,39 @@ function getPrevItemCounts(path, number)
 		let item = cases[i];// 当前遍历的 case 子句
 		let {test,consequent} = item;// 解构出 case 子句的 test 和 consequent 属性
 		let len = consequent.length;// 获取当前 case 子句中 consequent 数组的长度
-		if (!t.isExpressionStatement(consequent[len - 2])) // 检查倒数第二个语句是否是表达式语句
-		{
-			continue;// 如果不是表达式语句，跳过这个 case 子句
-		}
+
+		// if (!t.isExpressionStatement(consequent[len - 2])) // 检查倒数第二个语句是否是表达式语句
+		// {
+		// 	continue;// 如果不是表达式语句，跳过这个 case 子句
+		// }
 		// 获取倒数第二个表达式语句中的右侧部分
-	  let {right} = consequent[len - 2].expression;
-		// 检查右侧部分是否是数值字面量，且其值等于传入的 number
-	  if (t.isNumericLiteral(right,{value:number}))
-	  {
-	  	counts++; // 如果条件满足，增加计数器
-	  	continue;// 跳过当前循环，继续下一个 case 子句
-	  }
-	  // 检查右侧部分是否是条件表达式
-	  if (t.isConditionalExpression(right))
-	  {
-		  // 检查条件表达式的两个分支（consequent 和 alternate）是否有一个的值等于传入的 number
-	  	if (right.consequent.value == number ||
-	  	    right.alternate.value  == number)
-	  	{
-	  		counts++;// 如果条件满足，增加计数器
-	  	}
-	  }
+
+		if (t.isExpressionStatement(consequent[len - 2])) {
+			let { right } = consequent[len - 2].expression;
+			// 检查右侧部分是否是数值字面量，且其值等于传入的 number
+			if (t.isNumericLiteral(right, { value: number })) {
+				counts++; // 如果条件满足，增加计数器
+				continue;// 跳过当前循环，继续下一个 case 子句
+			}
+			// 检查右侧部分是否是条件表达式
+			if (t.isConditionalExpression(right)) {
+				// 检查条件表达式的两个分支（consequent 和 alternate）是否有一个的值等于传入的 number
+				if (right.consequent.value == number ||
+					right.alternate.value == number) {
+					counts++;// 如果条件满足，增加计数器
+				}
+			}
+		}
+		else{
+			if(t.isReturnStatement(consequent[len - 2])){
+				continue;
+			}else{
+				// debugger;
+				return;
+			}
+			
+		}
+	  
 	}
 
 	return counts;// 返回满足条件的 case 子句数量
@@ -223,7 +299,7 @@ function isCreateWhileNode(path,item,countsMap)
 		let falseValue = right.alternate.value;   //7 // 获取条件表达式的 false 分支值
 
 		let data = getItemFromTestValue(path, trueValue)// 获取测试值为 trueValue 的 case 子句及其索引
-
+		if(!data){return};
 		let trueItem = data[0] //case 6:.....  // 获取对应的 case 子句
 
 		let trueConse = trueItem.consequent;// 获取对应 case 子句的 consequent 数组
@@ -350,7 +426,9 @@ function isCreateWhileIFNode(path,item,countsMap)
 			let falseValue = right.alternate.value;   //7  // 获取条件表达式的 false 分支值
 
 			let trueData = getItemFromTestValue(path, trueValue);// 获取测试值为 trueValue 的 case 子句及其索引
+			if(!trueData){return};
 			let trueItem = trueData[0]; //case 6:..... // 获取对应的 case 子句
+			
 			let trueConse = trueItem.consequent;// 获取对应 case 子句的 consequent 数组
 			let trueLen = trueConse.length;	// 获取 trueConse 数组的长度
 			let rightNode = trueConse[trueLen-2].expression.right;// 获取 trueConse 数组中倒数第二个表达式的右侧部分
@@ -362,12 +440,14 @@ function isCreateWhileIFNode(path,item,countsMap)
         let true_false_number = rightNode.alternate.value;   //9 // 获取条件表达式的 false 分支值
 
         let trueTrueData = getItemFromTestValue(path, true_true_number);// 获取测试值为 true_true_number 的 case 子句及其索引
-        let true_true_item =  trueTrueData[0];  //case 8:... // 获取对应的 case 子句
+        if(!trueTrueData){return};
+		let true_true_item =  trueTrueData[0];  //case 8:... // 获取对应的 case 子句
         let true_true_conse = true_true_item.consequent;// 获取对应 case 子句的 consequent 数组
         let true_true_len   = true_true_conse.length;// 获取 true_true_conse 数组的长度
 
         let trueFalseData = getItemFromTestValue(path, true_false_number);// 获取测试值为 true_false_number 的 case 子句及其索引
-        let true_false_item = trueFalseData[0]; //case 9:...  // 获取对应的 case 子句
+        if(!trueFalseData){return};
+		let true_false_item = trueFalseData[0]; //case 9:...  // 获取对应的 case 子句
         let true_false_conse = true_false_item.consequent;// 获取对应 case 子句的 consequent 数组
         let true_false_len   = true_false_conse.length;    // 获取 true_false_conse 数组的长度
         // 检查 true_true_conse 和 true_false_conse 的倒数第二个表达式是否符合条件
@@ -488,6 +568,7 @@ function isCreateIFNode1(path,item,countsMap)
 
 	// 获取测试值为 trueValue 的 case 子句及其索引
 	let data = getItemFromTestValue(path, trueValue);
+	if(!data){return};
 	let trueItem = data[0] //case 8:.....  // 获取对应的 case 子句
 
 	let trueConse = trueItem.consequent; // 获取对应 case 子句的 consequent 数组
@@ -575,6 +656,7 @@ function isCreateIFNode2(path,item,countsMap)
 
 // 获取测试值为 falseValue 的 case 子句及其索引
 	let data = getItemFromTestValue(path, falseValue);
+	if(!data){return};
 	let falseItem = data[0] //case 8:.....  // 获取对应的 case 子句
 
 	let falseConse = falseItem.consequent; // 获取对应 case 子句的 consequent 数组
@@ -659,11 +741,13 @@ function isCreateIFNode3(path,item,countsMap)
 	if (t.isBinaryExpression(nextTest)) return;
 	// 获取测试值为 trueValue 的 case 子句及其索引
 	let trueData = getItemFromTestValue(path, trueValue);
+	if(!trueData){return};
 	let trueItem = trueData[0]; //case 6:.....  // 获取对应的 case 子句
 	let trueConse = trueItem.consequent; // 获取对应 case 子句的 consequent 数组
 	let trueLen = trueConse.length;// 获取 trueConse 数组的长度
 	// 获取测试值为 falseValue 的 case 子句及其索引
 	let falseData = getItemFromTestValue(path, falseValue);
+	if(!falseData){return};
 	let falseItem = falseData[0]; //case 8:.....  // 获取对应的 case 子句
 	let falseConse = falseItem.consequent;// 获取对应 case 子句的 consequent 数组
 	let falseLen = falseConse.length;// 获取 falseConse 数组的长度
@@ -770,8 +854,9 @@ function isCreateReturnNode1(path,item,countsMap)
 		let falseValue = right.alternate.value;   //7 // 获取条件表达式的 false 分支值
 		// 如果 nextTest 是一个二元表达式，直接返回
 		if (t.isBinaryExpression(nextTest)) return;
-	// 获取测试值为 trueValue 的 case 子句及其索引
-    let data = getItemFromTestValue(path, trueValue);
+		// 获取测试值为 trueValue 的 case 子句及其索引
+    	let data = getItemFromTestValue(path, trueValue);
+		if(!data){return};
 		let trueItem = data[0]; // 获取对应的 case 子句
 
 		let trueConse = trueItem.consequent; // 获取对应 case 子句的 consequent 数组
@@ -851,7 +936,7 @@ function isCreateReturnNode2(path,item,countsMap)
 	if (t.isBinaryExpression(nextTest)) return;// 如果 nextTest 是一个二元表达式，直接返回
 
 	let data = getItemFromTestValue(path, falseValue);// 获取测试值为 falseValue 的 case 子句及其索引
-
+	if(!data){return};
 	let falseItem = data[0]; // 获取对应的 case 子句
 
 	let falseConse = falseItem.consequent;// 获取对应 case 子句的 consequent 数组
@@ -926,6 +1011,7 @@ function isCreateWhileNode2(path,item,countsMap)
 
 
 		let data = getItemFromTestValue(path, trueValue);
+		if(!data){return};
 		let trueItem = data[0];  // 获取测试值为 trueValue 的 case 子句及其索引
 
 
@@ -1024,41 +1110,57 @@ const dealWithSwitch =
 			let {test,consequent} = item;
 
 			let len = consequent.length;
-			if (!t.isExpressionStatement(consequent[len-2]))
-			{//过滤掉return语句
-				continue;
-			}
+			// if (!t.isExpressionStatement(consequent[len-2]))
+			// {//过滤掉return语句
+			// 	continue;
+			// }
 
-			let {left,operator,right} = consequent[len-2].expression;
-			// console.log(right.type);
-			if (t.isNumericLiteral(right))
-			{
-				if (isCombinCases(path,item,countsMap))
-				{
-					i = -1;//每次替换成功后，又从零开始遍历
-					continue;
+			if (t.isExpressionStatement(consequent[len - 2])) {//过滤掉return语句
+				let { left, operator, right } = consequent[len - 2].expression;
+				// console.log(right.type);
+				if (t.isNumericLiteral(right)) {
+					if (isCombinCases(path, item, countsMap)) {
+						i = -1;//每次替换成功后，又从零开始遍历
+						continue;
+					}
 				}
+				// else if (t.isConditionalExpression(right))//倒数第二个节点右侧本身的节点类型不是 数字时
+				// {
+				// 	//item是switchcase
+				// 	if (isCreateWhileNode(path, item, countsMap) || //过 二元表达式的while构建，下一个自行到自身
+				// 		isCreateWhileIFNode(path, item, countsMap) || //过 有点麻烦
+				// 		isCreateIFNode1(path, item, countsMap) ||//过
+				// 		isCreateIFNode2(path, item, countsMap) ||//过
+				// 		isCreateIFNode3(path, item, countsMap) ||  //过
+				// 		isCreateReturnNode1(path, item, countsMap) || //过 true为return
+				// 		isCreateReturnNode2(path, item, countsMap) || //过 false为return
+				// 		isCreateWhileNode2(path, item, countsMap)//过 不是二元表达式的while构建
+				// 	) {
+				// 		i = -1;
+				// 		continue;
+				// 	}
+				// }
+				// else {
+				// 	debugger;
+				// }
 			}
-			else if (t.isConditionalExpression(right))//倒数第二个节点右侧本身的节点类型不是 数字时
-			{
-				//item是switchcase
-				if (isCreateWhileNode(path,item,countsMap)|| //过 二元表达式的while构建，下一个自行到自身
-				   isCreateWhileIFNode(path,item,countsMap) || //过 有点麻烦
-				   isCreateIFNode1(path,item,countsMap) ||//过
-				   isCreateIFNode2(path,item,countsMap) ||//过
-				   isCreateIFNode3(path,item,countsMap) ||  //过
-				   isCreateReturnNode1(path,item,countsMap) || //过 true为return
-				   isCreateReturnNode2(path,item,countsMap) || //过 false为return
-				   isCreateWhileNode2(path,item,countsMap)//过 不是二元表达式的while构建
-				   )
-				{
-					i = -1;
-					continue;
-				}
-			}
-			else{
-				debugger;
-			}
+			// else if (t.isIfStatement(consequent[len - 2])) {
+			// 	//item是switchcase
+			// 	if (isCreateWhileNode(path, item, countsMap) || //过 二元表达式的while构建，下一个自行到自身
+			// 		isCreateWhileIFNode(path, item, countsMap) || //过 有点麻烦
+			// 		isCreateIFNode1(path, item, countsMap) ||//过
+			// 		isCreateIFNode2(path, item, countsMap) ||//过
+			// 		isCreateIFNode3(path, item, countsMap) ||  //过
+			// 		isCreateReturnNode1(path, item, countsMap) || //过 true为return
+			// 		isCreateReturnNode2(path, item, countsMap) || //过 false为return
+			// 		isCreateWhileNode2(path, item, countsMap)//过 不是二元表达式的while构建
+			// 	) {
+			// 		i = -1;
+			// 		continue;
+			// 	}
+			// }
+
+			
 		}
 	},
 }
@@ -1126,7 +1228,7 @@ const combinSingleCase =
 	}
 }
 
-traverse(ast, combinSingleCase);
+// traverse(ast, combinSingleCase);
 
 
 
@@ -1211,7 +1313,7 @@ const replaceSwitchNOde =
 }
 
 
-traverse(ast, replaceSwitchNOde);
+// traverse(ast, replaceSwitchNOde);
 
 
 console.timeEnd('穷举还原一些简单的if和for混淆');
