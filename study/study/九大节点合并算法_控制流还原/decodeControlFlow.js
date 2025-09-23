@@ -219,7 +219,7 @@ function isCreateWhileNode(path,item,countsMap)
 
 	if (t.isBinaryExpression(nextTest))// 检查 nextTest 是否是一个二元表达式
 	{
-		let trueValue  = right.consequent.value;  //6 // 获取条件表达式的 true 分支值
+		let trueValue = right.consequent.value;  //6 // 获取条件表达式的 true 分支值
 		let falseValue = right.alternate.value;   //7 // 获取条件表达式的 false 分支值
 
 		let data = getItemFromTestValue(path, trueValue)// 获取测试值为 trueValue 的 case 子句及其索引
@@ -227,28 +227,27 @@ function isCreateWhileNode(path,item,countsMap)
 		let trueItem = data[0] //case 6:.....  // 获取对应的 case 子句
 
 		let trueConse = trueItem.consequent;// 获取对应 case 子句的 consequent 数组
-		let trueLen   = trueConse.length; // 获取 trueConse 数组的长度
-		let rightNode = trueConse[trueLen-2].expression.right; // 获取 trueConse 数组中倒数第二个表达式的右侧部分
+		let trueLen = trueConse.length; // 获取 trueConse 数组的长度
+		let rightNode = trueConse[trueLen - 2].expression.right; // 获取 trueConse 数组中倒数第二个表达式的右侧部分
 		// 检查 rightNode 是否是一个数值字面量，且值等于 curValue
-		if (t.isNumericLiteral(rightNode,{value:curValue}))
-		{
+		if (t.isNumericLiteral(rightNode, { value: curValue })) {
 			// 创建一个 while 语句节点，条件为 nextTest，循环体为 trueConse 中除去最后两个元素的部分
-			let whileNode = t.whileStatement(nextTest,t.blockStatement(trueConse.slice(0, trueLen - 2)));
+			let whileNode = t.whileStatement(nextTest, t.blockStatement(trueConse.slice(0, trueLen - 2)));
 			consequent.splice(consequent.length - 2, 0, whileNode);// 在当前 case 子句的倒数第二个位置插入 whileNode
-      consequent[consequent.length - 2].expression.right = t.NumericLiteral(falseValue);// 更新倒数第二个表达式的右侧值为 falseValue
+			consequent[consequent.length - 2].expression.right = t.NumericLiteral(falseValue);// 更新倒数第二个表达式的右侧值为 falseValue
 
-      let counts = countsMap.get(trueValue);// 获取 trueValue 的计数值
+			let counts = countsMap.get(trueValue);// 获取 trueValue 的计数值
 
-      if (counts == 1)// 如果计数值等于 1
-      {
-      	path.node.cases.splice(data[1], 1);// 从 cases 数组中删除找到的 case 子句
+			if (counts == 1)// 如果计数值等于 1
+			{
+				path.node.cases.splice(data[1], 1);// 从 cases 数组中删除找到的 case 子句
 
-      	let curCounts = countsMap.get(curValue);// 获取 curValue 的计数值
-      	countsMap.set(curValue,curCounts - 1); // 更新 curValue 的计数值
-      }
-      countsMap.set(trueValue,counts - 1);// 更新 trueValue 的计数值
+				let curCounts = countsMap.get(curValue);// 获取 curValue 的计数值
+				countsMap.set(curValue, curCounts - 1); // 更新 curValue 的计数值
+			}
+			countsMap.set(trueValue, counts - 1);// 更新 trueValue 的计数值
 
-      return true;// 返回 true 表示创建 while 节点成功
+			return true;// 返回 true 表示创建 while 节点成功
 		}
 	}
 
@@ -494,9 +493,8 @@ function isCreateIFNode1(path,item,countsMap)
 	let trueLen = trueConse.length;// 获取 trueConse 数组的长度
 
 	// 检查 trueConse 的倒数第二个表达式是否符合条件
-	if (t.isExpressionStatement(trueConse[trueLen-2]) &&
-		  t.isNumericLiteral(trueConse[trueLen-2].expression.right,{value:falseValue}))
-	{
+	if (t.isExpressionStatement(trueConse[trueLen - 2]) &&
+		t.isNumericLiteral(trueConse[trueLen - 2].expression.right, { value: falseValue })) {
 		// 创建 if 语句节点
 		let ifNode = t.ifStatement(nextTest, t.blockStatement(trueConse.slice(0, trueLen - 2)));
 		// 在当前 case 子句的倒数第二个位置插入 ifNode
@@ -505,20 +503,17 @@ function isCreateIFNode1(path,item,countsMap)
 		consequent[consequent.length - 2].expression.right = t.numericLiteral(falseValue);  // next = 7
 
 		// 更新 countsMap 和 path.node.cases
-    let counts = countsMap.get(trueValue);
-    if (counts == 1)
-    {
-     path.node.cases.splice(data[1], 1);
+		let counts = countsMap.get(trueValue);
+		if (counts == 1) {
+			path.node.cases.splice(data[1], 1);
 
-     falseCounts = countsMap.get(falseValue);
-     countsMap.set(falseValue,falseCounts-1);
-    }
-    countsMap.set(trueValue,counts-1);
+			falseCounts = countsMap.get(falseValue);
+			countsMap.set(falseValue, falseCounts - 1);
+		}
+		countsMap.set(trueValue, counts - 1);
 
-
-
-    return true;
-  }
+		return true;
+	}
 
 	return false;
 }
@@ -573,7 +568,7 @@ function isCreateIFNode2(path,item,countsMap)
 	let falseValue = right.alternate.value;   //7 // 获取条件表达式的 false 分支值
 	if (t.isBinaryExpression(nextTest)) return; // 如果 nextTest 是一个二元表达式，直接返回
 
-// 获取测试值为 falseValue 的 case 子句及其索引
+	// 获取测试值为 falseValue 的 case 子句及其索引
 	let data = getItemFromTestValue(path, falseValue);
 	let falseItem = data[0] //case 8:.....  // 获取对应的 case 子句
 
@@ -1006,7 +1001,53 @@ function savePrevsCountsToMap(path)
 
 
 
+function isCreateIFNode4(path,item,countsMap){
+	let {test,consequent} = item;
+	let len = consequent.length;
+	let curValue = test.value;
+	let {left,operator,right} = consequent[len-2].expression;
 
+	let nextTest = right.test;
+	let trueValue = right.consequent.value;
+	let falseValue = right.alternate.value;
+
+	if(types.isBinaryExpression(nextTest)) return;
+	let data = getItemFromTestValue(path,falseValue);
+	if(!data) return;
+	let falseItem = data[0]; // 获取对应的 case 子句
+
+	let falseConse = falseItem.consequent;// 获取对应 case 子句的 consequent 数组
+	let falseLen = falseConse.length;// 获取 falseConse 数组的长度
+
+	if (types.isExpressionStatement(falseConse[falseLen - 2]) && types.isNumericLiteral(falseConse[falseLen - 2].expression.right)) {
+		let nextFalseValue = falseConse[falseLen - 2].expression.right.value;
+		let nextFalseData = getItemFromTestValue(path, nextFalseValue);
+
+		let nextTrueData = getItemFromTestValue(path, trueValue);
+
+		if (!nextFalseData && !nextTrueData) {
+			let ifNode = types.ifStatement(nextTest,
+				t.blockStatement([]),
+				t.blockStatement(falseConse.slice(0, falseLen - 2))
+			)
+			consequent.splice(consequent.length - 2, 0, ifNode);
+		}
+
+		falseData = getItemFromTestValue(path, falseValue);
+		let falseCounts = countsMap.get(falseValue);
+		if (falseCounts == 1) {
+			path.node.cases.splice(falseData[1], 1);
+			let counts = countsMap.get(falseConse[falseLen - 2].expression.right.value);
+			countsMap.set(falseConse[falseLen - 2].expression.right.value, counts - 1);
+		}
+		countsMap.set(falseValue, falseCounts - 1);
+
+		return;
+	}
+
+	return false;
+
+}
 
 
 const dealWithSwitch =
@@ -1042,14 +1083,17 @@ const dealWithSwitch =
 			else if (t.isConditionalExpression(right))//倒数第二个节点右侧本身的节点类型不是 数字时
 			{
 				//item是switchcase
-				if (isCreateWhileNode(path,item,countsMap)|| //过 二元表达式的while构建，下一个自行到自身
-				   isCreateWhileIFNode(path,item,countsMap) || //过 有点麻烦
-				   isCreateIFNode1(path,item,countsMap) ||//过
-				   isCreateIFNode2(path,item,countsMap) ||//过
-				   isCreateIFNode3(path,item,countsMap) ||  //过
-				   isCreateReturnNode1(path,item,countsMap) || //过 true为return
-				   isCreateReturnNode2(path,item,countsMap) || //过 false为return
-				   isCreateWhileNode2(path,item,countsMap)//过 不是二元表达式的while构建
+				if (
+				//    isCreateWhileNode(path,item,countsMap)|| //过 二元表达式的while构建，下一个自行到自身
+				//    isCreateWhileIFNode(path,item,countsMap) || //过 有点麻烦
+				//    isCreateIFNode1(path,item,countsMap) ||//过
+				//    isCreateIFNode2(path,item,countsMap) ||//过
+				//    isCreateIFNode3(path,item,countsMap) ||  //过
+				//    isCreateReturnNode1(path,item,countsMap) || //过 true为return
+				//    isCreateReturnNode2(path,item,countsMap) || //过 false为return
+				//    isCreateWhileNode2(path,item,countsMap)||//过 不是二元表达式的while构建
+
+				   isCreateIFNode4(path,item,countsMap)
 				   )
 				{
 					i = -1;

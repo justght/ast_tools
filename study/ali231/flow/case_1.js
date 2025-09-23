@@ -4,13 +4,18 @@ switch (l){
     case 4526592:
         l = ($i = (vi = $i) < 64) ? 7605760 : 4196096;
         break;
-    case 9765632:
-        $i = vi;
-        l = 4526592;
-        break;
-    case 524288:
-        $i = -vi;
-        l = 4526592;
+    case 4196096:
+        ni = 64 * xi;
+        _i = vi % 128;
+        ii = [];
+        Bi = _i + 128;
+        Si = vi - _i;
+        _i = Si / 128;
+        Si = 63 & _i;
+        _i = Si + ni;
+        ii.push(Bi, _i);
+        Ci = ii;
+        l = 9374208;
         break;
 }
 //"200448": 2,
@@ -37,9 +42,9 @@ switch (l){
     case 396800:
         yi = (sn = yi).length;
         Ki = sn;
-        l = Vi ? 460288 : 4130560;
+        l = Vi ? 460288 : 4130560;//460288为0，4130560 1
         break;
-    case 4853248:
+    case 4853248://0
         Gi = new Uint8Array(Ki);
         yi = Gi;
         l = 396800;
@@ -47,6 +52,18 @@ switch (l){
     case 5250048:
         l = (Kn = Gi) ? 2296576 : 396800;
         break;
+    case 2296576:
+        Gi = new Uint8Array(Ki);
+        yi = Gi;
+        l = 396800;
+        break;
+
+    case 7677696:
+        Gi = Kn;
+        l = 5250048;
+        break;
+
+
 }
 
 
